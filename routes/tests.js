@@ -28,6 +28,16 @@ router.post('/', async (req, res) => {
   res.json(data);
 });
 
+// PUT /api/tests/:id
+router.put('/:id', async (req, res) => {
+  const { date, name, amount } = req.body;
+  let q = supabase.from('tests').update({ date, name, amount }).eq('id', req.params.id);
+  if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
+  const { data, error } = await q.select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
 // DELETE /api/tests/:id
 router.delete('/:id', async (req, res) => {
   let q = supabase.from('tests').delete().eq('id', req.params.id);
