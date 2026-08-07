@@ -908,8 +908,9 @@ function getDashTests(){
   });
 }
 
-function renderDash(){
+async function renderDash(){
   const records  = getDashRecords();
+  skus = (await apiGET('/skus')) || skus;
   const testRecs = getDashTests();
   const pageId   = $('f-page')?.value||'';
   const pageLabel= pageId ? (pageById(pageId)?.name||pageId) : 'ทุกเพจ';
