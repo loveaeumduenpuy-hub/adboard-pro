@@ -9,7 +9,7 @@ router.use(requireAuth);
 // admin เห็นทั้งหมด, staff เห็นเฉพาะที่ตัวเองกรอก
 router.get('/', async (req, res) => {
   const { start, end, page_id } = req.query;
-  let q = supabase.from('sales').select('*, pages(name)').order('date', { ascending: false });
+  let q = supabase.from('sales').select('*, pages(name), items').order('date', { ascending: false });
 
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
   if (start)   q = q.gte('date', start);
