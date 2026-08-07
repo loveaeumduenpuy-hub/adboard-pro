@@ -476,20 +476,49 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,1
 <!-- ════ HISTORY ════ -->
 <div id="page-history" class="page">
   <div class="topbar">
+    <div class="topbar-left"><h2>ประวัติ</h2></div>
+  </div>
 
-    <div class="topbar-left"><h2>ประวัติยอดขาย</h2></div>
+  <!-- แท็บ -->
+  <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border)">
+    <button id="htab-sales-btn" onclick="switchHistTab('sales')"
+      style="padding:10px 24px;border:none;border-bottom:2px solid var(--blue);background:transparent;color:var(--blue);font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer">
+      ยอดขาย
+    </button>
+    <button id="htab-tests-btn" onclick="switchHistTab('tests')"
+      style="padding:10px 24px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--muted2);font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer">
+      ค่าเทสแอด
+    </button>
   </div>
-  <div class="filter-bar" style="margin-bottom:16px">
-    <span class="filter-label">จาก</span>
-    <input type="date" class="filter-input" id="h-start">
-    <span class="filter-label">ถึง</span>
-    <input type="date" class="filter-input" id="h-end">
-    <span class="filter-label">เพจ</span>
-    <select class="filter-sel" id="h-page"><option value="">ทุกเพจ</option></select>
-    <button class="btn btn-primary btn-sm" onclick="renderHistory()">ค้นหา</button>
+
+  <!-- แท็บยอดขาย -->
+  <div id="htab-sales-content">
+    <div class="filter-bar" style="margin-bottom:16px">
+      <span class="filter-label">จาก</span>
+      <input type="date" class="filter-input" id="h-start">
+      <span class="filter-label">ถึง</span>
+      <input type="date" class="filter-input" id="h-end">
+      <span class="filter-label">เพจ</span>
+      <select class="filter-sel" id="h-page"><option value="">ทุกเพจ</option></select>
+      <button class="btn btn-primary btn-sm" onclick="renderHistory()">ค้นหา</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="hist-tbl"></table></div>
+    </div>
   </div>
-  <div class="card">
-    <div class="tbl-wrap"><table id="hist-tbl"></table></div>
+
+  <!-- แท็บค่าเทสแอด -->
+  <div id="htab-tests-content" style="display:none">
+    <div class="filter-bar" style="margin-bottom:16px">
+      <span class="filter-label">จาก</span>
+      <input type="date" class="filter-input" id="ht-start">
+      <span class="filter-label">ถึง</span>
+      <input type="date" class="filter-input" id="ht-end">
+      <button class="btn btn-primary btn-sm" onclick="renderTestHistory()">ค้นหา</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table id="hist-test-tbl"></table></div>
+    </div>
   </div>
 </div>
 
@@ -1162,10 +1191,53 @@ function clearTests(){
 // ══════════════════════════════════════════
 //  HISTORY
 // ══════════════════════════════════════════
+function switchHistTab(tab){
+  const isSales = tab==='sales';
+  $('htab-sales-content').style.display = isSales?'block':'none';
+  $('htab-tests-content').style.display = isSales?'none':'block';
+  $('htab-sales-btn').style.color = isSales?'var(--blue)':'var(--muted2)';
+  $('htab-sales-btn').style.borderBottom = isSales?'2px solid var(--blue)':'2px solid transparent';
+  $('htab-tests-btn').style.color = isSales?'var(--muted2)':'var(--blue)';
+  $('htab-tests-btn').style.borderBottom = isSales?'2px solid transparent':'2px solid var(--blue)';
+  if(!isSales) renderTestHistory();
+}
+
 function setHistDefaults(){
   const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
   $('h-start').value=`${y}-${m}-01`;
   $('h-end').value=today();
+  $('ht-start').value=`${y}-${m}-01`;
+  $('ht-end').value=today();
+}
+
+async function renderTestHistory(){
+  const start=$('ht-start').value, end=$('ht-end').value;
+  const data = await apiGET(`/tests?start=${start}&end=${end}`) || [];
+  const total = data.reduce((s,t)=>s+(+t.amount||0),0);
+  $('hist-test-tbl').innerHTML = mkTable(
+    ['วันที่','ชื่อสินค้าที่เทส','ค่าแอด (฿)','จัดการ'],
+    data.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>[
+      t.date,
+      esc(t.name||'—'),
+      `<span class="r mono">${fmt(t.amount)}</span>`,
+      `<button class="btn btn-ghost btn-sm" onclick="openEditTest('${t.id}','${esc(t.date)}','${esc(t.name||'')}',${t.amount})">แก้ไข</button>
+       <button class="btn btn-danger btn-sm" onclick="deleteTest('${t.id}')">ลบ</button>`
+    ]),
+    'ยังไม่มีรายการค่าเทสแอด'
+  );
+}
+
+function openEditTest(id, date, name, amount){
+  const newName = prompt('ชื่อสินค้าที่เทส:', name);
+  if(newName===null) return;
+  const newAmount = parseFloat(prompt('ค่าแอด (฿):', amount));
+  if(isNaN(newAmount)) return;
+  const newDate = prompt('วันที่ (YYYY-MM-DD):', date);
+  if(!newDate) return;
+  apiPUT('/tests/'+id, {name:newName, amount:newAmount, date:newDate}).then(r=>{
+    if(r&&!r.error){ toast('แก้ไขแล้ว'); renderTestHistory(); }
+    else toast('แก้ไขไม่ได้: '+(r?.error||''),'var(--red)');
+  });
 }
 function renderHistory(){
   const start=$('h-start').value, end=$('h-end').value, pageId=$('h-page').value;
@@ -1196,7 +1268,10 @@ async function deleteSale(id){
 async function deleteTest(id){
   if(!confirm('ลบรายการเทสแอดนี้?'))return;
   await apiDEL('/tests/'+id);
-  tests=tests.filter(t=>t.id!==id); renderDash(); toast('ลบแล้ว');
+  tests=tests.filter(t=>t.id!==id);
+  renderDash();
+  if($('htab-tests-content')?.style.display!=='none') renderTestHistory();
+  toast('ลบแล้ว');
 }
 function openEditSale(id){
   const r=sales.find(s=>s.id===id); if(!r)return;
