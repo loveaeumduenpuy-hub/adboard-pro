@@ -791,8 +791,8 @@ function calcItem(sku, orders){
 
 function calcRecord(rec, skuFilter=''){
   let t = {orders:0,pieces:0,revenue:0,prodCost:0,ship:0,pack:0,admin:0,cod:0,opsCost:0,totalCost:0,ads:+rec.ads||0};
-  parseItems(rec).filter(it=>!skuFilter||it.skuId===skuFilter).forEach(it=>{
-    const sku = skuById(it.skuId);
+  parseItems(rec).filter(it=>!skuFilter||(it.skuId===skuFilter||it.sku_id===skuFilter)).forEach(it=>{
+    const sku = skuById(it.skuId || it.sku_id);
     if(!sku) return;
     const c = calcItem(sku, it.orders);
     for(const k of ['orders','pieces','revenue','prodCost','ship','pack','admin','cod','opsCost','totalCost']) t[k]+=c[k];
