@@ -880,7 +880,7 @@ function getDashRecords(){
   return sales.filter(r=>{
     if(start&&r.date<start) return false;
     if(end  &&r.date>end)   return false;
-    if(pageId&&r.pageId!==pageId) return false;
+    if(pageId&&(r.page_id||r.pageId)!==pageId) return false;
     return true;
   });
 }
