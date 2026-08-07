@@ -1179,7 +1179,7 @@ function renderHistory(){
     ['วันที่','เพจ','ออเดอร์','ยอดขาย','Ads','กำไรสุทธิ','จัดการ'],
     data.map(r=>{
       const c=calcRecord(r);
-      return [r.date,esc(pageName(r.pageId)),c.orders,fmt(c.revenue),
+      return [r.date,esc(pageName(r.page_id||r.pageId)),c.orders,fmt(c.revenue),
         `<span class="r mono">${fmt(c.ads)}</span>`,
         `<span class="mono ${c.profit>=0?'g':'r'}">${fmt(c.profit)}</span>`,
         `<button class="btn btn-ghost btn-sm" onclick="openEditSale('${r.id}')">แก้ไข</button>
