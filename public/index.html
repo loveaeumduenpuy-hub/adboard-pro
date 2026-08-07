@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AdBoard Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #080c14;
+  --s1:       #0d1220;
+  --s2:       #111827;
+  --s3:       #1a2236;
+  --border:   #1e2d45;
+  --border2:  #253650;
+  --text:     #e2e8f0;
+  --muted:    #5a7194;
+  --muted2:   #8ba3c0;
+  --blue:     #3b82f6;
+  --cyan:     #06b6d4;
+  --green:    #10b981;
+  --red:      #ef4444;
+  --yellow:   #f59e0b;
+  --purple:   #8b5cf6;
+  --profit:   #10b981;
+  --loss:     #ef4444;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+
+/* ── App shell ── */
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{
+  background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sb-brand{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.sb-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--purple));
+  display:grid;place-items:center;font-size:18px;flex-shrink:0;
+}
+.sb-brand-text h1{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.sb-brand-text p{font-size:11px;color:var(--muted2);margin-top:1px}
+
+.sb-nav{padding:12px 10px;flex:1;display:flex;flex-direction:column;gap:3px;}
+.nav-btn{
+  width:100%;text-align:left;border:none;background:transparent;
+  color:var(--muted2);border-radius:9px;padding:10px 12px;
+  font-family:'Sarabun',sans-serif;font-size:13.5px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:10px;
+  transition:all .15s;
+}
+.nav-btn:hover{background:var(--s3);color:var(--text)}
+.nav-btn.active{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+
+.sb-footer{padding:14px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+
+/* ── Main ── */
+.main{overflow-y:auto;min-height:100vh}
+.page{display:none;padding:28px 32px;max-width:1300px}
+.page.active{display:block}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
+.topbar-left h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.topbar-left p{font-size:12px;color:var(--muted2);margin-top:3px}
+
+/* ── Filter bar ── */
+.filter-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;margin-bottom:22px;
+}
+.filter-tabs{display:flex;background:var(--s3);border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.ftab{
+  padding:7px 16px;font-size:12px;font-weight:700;color:var(--muted2);
+  cursor:pointer;border:none;background:transparent;font-family:'Sarabun',sans-serif;
+  transition:all .15s;white-space:nowrap;
+}
+.ftab.active{background:var(--blue);color:#fff}
+.filter-sep{width:1px;height:28px;background:var(--border);margin:0 4px}
+.filter-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+select.filter-sel{
+  background:var(--s3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:7px 12px;font-family:'Sarabun',sans-serif;font-size:13px;outline:none;
+}
+input.filter-input{
+  background:var(--s3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:7px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+  outline:none;width:120px;
+}
+
+/* ── KPI row ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:14px;
+  padding:18px 16px;position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:var(--kpi-accent,var(--blue));
+}
+.kpi-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.kpi-value{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--text);line-height:1}
+.kpi-value.up{color:var(--profit)}
+.kpi-value.dn{color:var(--loss)}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* ── Grid ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* ── Card ── */
+.card{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.card-title span{font-size:11px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{
+  background:var(--s3);color:var(--muted2);font-size:10px;text-transform:uppercase;
+  letter-spacing:.5px;padding:10px 12px;text-align:left;white-space:nowrap;
+  border-bottom:1px solid var(--border);font-weight:700;
+}
+td{padding:10px 12px;border-bottom:1px solid rgba(30,45,69,.6);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(26,34,54,.7)}
+.mono{font-family:'IBM Plex Mono',monospace}
+.g{color:var(--profit)} .r{color:var(--loss)} .y{color:var(--yellow)} .b{color:var(--blue)}
+
+/* ── Badge ── */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700}
+.badge-g{background:rgba(16,185,129,.12);color:var(--green)}
+.badge-r{background:rgba(239,68,68,.12);color:var(--red)}
+.badge-b{background:rgba(59,130,246,.12);color:var(--blue)}
+.badge-y{background:rgba(245,158,11,.12);color:var(--yellow)}
+
+/* ── Forms ── */
+.form-section{margin-bottom:20px}
+.form-section-label{
+  font-size:10px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.8px;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.form-section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.frow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+input[type=text],input[type=number],input[type=date],input[type=month],select,textarea{
+  background:var(--s3);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:9px 12px;font-family:'Sarabun',sans-serif;font-size:14px;outline:none;
+  transition:border .15s;
+}
+input[type=number]{font-family:'IBM Plex Mono',monospace;font-size:13px}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,130,246,.12)}
+.suf{position:relative;display:inline-flex;align-items:center}
+.suf input{padding-right:30px}
+.suf span{position:absolute;right:10px;font-size:11px;color:var(--muted);pointer-events:none}
+
+/* ── Buttons ── */
+.btn{
+  border:none;border-radius:9px;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;
+  padding:9px 18px;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{opacity:.85}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-success{background:var(--green);color:#052e16}
+.btn-danger{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted2)}
+.btn-sm{padding:5px 11px;font-size:11px;border-radius:7px}
+
+/* ── SKU order inputs ── */
+.sku-order-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:8px}
+.sku-order-item{
+  background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:12px;
+}
+.sku-order-item .sku-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.sku-order-item .sku-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.sku-order-item input{width:100%;padding:7px 10px;font-size:16px}
+
+/* ── Test ad rows ── */
+.test-row{
+  display:flex;gap:8px;align-items:center;margin-bottom:8px;
+  background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;
+}
+.test-row input[type=text]{flex:1;min-width:120px}
+.test-row input[type=number]{width:130px}
+.test-row .btn-danger{flex-shrink:0}
+
+/* ── Preview box ── */
+.preview-box{
+  background:var(--s3);border:1px solid var(--border2);border-radius:10px;
+  padding:14px 16px;display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;
+}
+.pv-item{display:flex;flex-direction:column;gap:2px}
+.pv-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.pv-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+
+/* ── Cost chips ── */
+.cost-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.cost-chip{
+  background:var(--s3);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;display:flex;flex-direction:column;gap:2px;
+}
+.chip-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.chip-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--loss)}
+.chip-pct{font-size:10px;color:var(--muted)}
+
+/* ── Chart ── */
+.chart-wrap{position:relative;height:220px}
+
+/* ── Modal ── */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.mbox{background:var(--s2);border:1px solid var(--border2);border-radius:16px;padding:22px;width:min(640px,96vw);max-height:90vh;overflow-y:auto}
+.mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.mhead h3{font-size:16px;font-weight:800}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:24px;right:24px;background:var(--s2);border:1px solid var(--border2);
+  border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;z-index:9999;
+  opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:5px}
+
+@media(max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:860px){
+  .app{grid-template-columns:1fr}
+  .sidebar{height:auto;position:relative;flex-direction:row;flex-wrap:wrap}
+  .sb-nav{flex-direction:row;padding:8px}
+  .page{padding:16px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .grid2,.grid3{grid-template-columns:1fr}
+}
+
+/* ── Login screen ── */
+#login-screen{
+  display:none;position:fixed;inset:0;background:var(--bg);
+  z-index:9999;align-items:center;justify-content:center;
+}
+.login-box{
+  background:var(--s2);border:1px solid var(--border2);border-radius:16px;
+  padding:36px 32px;width:min(400px,94vw);
+}
+.login-box h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.login-box p{color:var(--muted2);font-size:13px;margin-bottom:28px}
+.login-box .fg{margin-bottom:14px}
+.login-box input{width:100%;font-size:15px}
+.login-box .btn{width:100%;justify-content:center;font-size:15px;padding:11px}
+#l-msg{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-icon">📈</div>
+    <div class="sb-brand-text">
+      <h1>AdBoard Pro</h1>
+      <p>ระบบสรุปยอดแอด</p>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <button class="nav-btn active" onclick="goPage('dashboard',this)" class="nav-btn active admin-only"><span class="nav-icon">📊</span>Dashboard</button>
+    <button class="nav-btn" onclick="goPage('entry',this)"><span class="nav-icon">➕</span>กรอกยอดรายวัน</button>
+    <button class="nav-btn" onclick="goPage('history',this)" class="nav-btn admin-only"><span class="nav-icon">📋</span>ประวัติยอดขาย</button>
+    <button class="nav-btn" onclick="goPage('skumgr',this)" class="nav-btn admin-only"><span class="nav-icon">📦</span>จัดการ SKU</button>
+    <button class="nav-btn" onclick="goPage('returns',this)" class="nav-btn admin-only"><span class="nav-icon">🔁</span>ตีกลับ</button>
+  </nav>
+  <div class="sb-footer" id="sb-user-info">กำลังโหลด...</div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+<!-- ════ DASHBOARD ════ -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2>Dashboard</h2>
+      <p id="dash-subtitle">สรุปยอดทุกเพจ</p>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="filter-tabs">
+      <button class="ftab active" onclick="setMode('today',this)">วันนี้</button>
+      <button class="ftab" onclick="setMode('month',this)">เดือนนี้</button>
+      <button class="ftab" onclick="setMode('range',this)">กำหนดเอง</button>
+    </div>
+    <div class="filter-sep"></div>
+
+    <!-- today controls -->
+    <div id="fc-today" style="display:flex;gap:8px;align-items:center">
+      <span class="filter-label">วันที่</span>
+      <input type="date" class="filter-input" id="f-date" onchange="renderDash()">
+    </div>
+    <!-- month controls -->
+    <div id="fc-month" style="display:none;gap:8px;align-items:center">
+      <span class="filter-label">เดือน</span>
+      <input type="month" class="filter-input" id="f-month" onchange="renderDash()" style="width:140px">
+    </div>
+    <!-- range controls -->
+    <div id="fc-range" style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="filter-label">จาก</span>
+      <input type="date" class="filter-input" id="f-start" onchange="renderDash()">
+      <span class="filter-label">ถึง</span>
+      <input type="date" class="filter-input" id="f-end" onchange="renderDash()">
+    </div>
+
+    <div class="filter-sep"></div>
+    <span class="filter-label">เพจ</span>
+    <select class="filter-sel" id="f-page" onchange="renderDash()">
+      <option value="">ทุกเพจ</option>
+    </select>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--kpi-accent:var(--blue)">
+      <div class="kpi-label">ยอดขายรวม</div>
+      <div class="kpi-value mono" id="k-rev">฿0</div>
+      <div class="kpi-sub" id="k-orders">0 ออเดอร์</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:var(--red)">
+      <div class="kpi-label">ค่าแอดรวม</div>
+      <div class="kpi-value mono r" id="k-ads">฿0</div>
+      <div class="kpi-sub" id="k-roas">ROAS —</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:var(--orange,#f97316)">
+      <div class="kpi-label">ค่าเทสแอด</div>
+      <div class="kpi-value mono r" id="k-test">฿0</div>
+      <div class="kpi-sub" id="k-test-sub">เทสยังไม่ขาย</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:var(--yellow)">
+      <div class="kpi-label">ต้นทุนรวม</div>
+      <div class="kpi-value mono" id="k-cost">฿0</div>
+      <div class="kpi-sub" id="k-cost-sub">สินค้า+ops</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:var(--green)">
+      <div class="kpi-label">กำไรสุทธิ</div>
+      <div class="kpi-value mono" id="k-profit">฿0</div>
+      <div class="kpi-sub" id="k-margin">Margin —</div>
+    </div>
+    <div class="kpi-card" style="--kpi-accent:var(--purple)">
+      <div class="kpi-label">สถานะ</div>
+      <div id="k-status" style="margin-top:10px"><span class="badge badge-b">รอข้อมูล</span></div>
+      <div class="kpi-sub" id="k-status-sub" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <!-- Doughnut chart -->
+    <div class="card">
+      <div class="card-title">สัดส่วนต้นทุน & กำไร</div>
+      <div class="chart-wrap"><canvas id="donut-chart"></canvas></div>
+    </div>
+    <!-- Cost breakdown table -->
+    <div class="card">
+      <div class="card-title">วิเคราะห์ต้นทุน <span>% ของยอดขาย</span></div>
+      <div class="tbl-wrap"><table id="cost-tbl"></table></div>
+    </div>
+  </div>
+
+  <!-- Test ads log -->
+  <div class="card">
+    <div class="card-title">บันทึกค่าเทสแอด <span>เงินที่เสียไปฟรี ยังไม่เกิดยอดขาย</span></div>
+    <div class="tbl-wrap"><table id="test-tbl"></table></div>
+  </div>
+
+  <!-- Daily summary -->
+  <div class="card">
+    <div class="card-title">สรุปรายวัน</div>
+    <div class="tbl-wrap"><table id="daily-tbl"></table></div>
+  </div>
+
+  <!-- SKU summary -->
+  <div class="card">
+    <div class="card-title">สรุปแยก SKU</div>
+    <div class="tbl-wrap"><table id="sku-tbl"></table></div>
+  </div>
+</div>
+
+<!-- ════ ENTRY ════ -->
+<div id="page-entry" class="page">
+  <div class="topbar">
+    <div class="topbar-left"><h2>กรอกยอดรายวัน</h2><p>กรอกแค่ Ads + ออเดอร์</p></div>
+  </div>
+  <div class="card" style="max-width:720px">
+    <div class="form-section">
+      <div class="form-section-label">ข้อมูลทั่วไป</div>
+      <div class="frow">
+        <div class="fg">
+          <label>วันที่</label>
+          <input type="date" id="e-date" style="width:152px">
+        </div>
+        <div class="fg">
+          <label>เพจ</label>
+          <select id="e-page" onchange="renderSkuInputs()" style="min-width:180px">
+            <option value="">— เลือกเพจ —</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>ค่า Ads วันนี้ (฿)</label>
+          <input type="number" id="e-ads" value="0" style="width:140px" oninput="updatePreview()">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-label">ออเดอร์ต่อ SKU</div>
+      <div id="sku-inputs"><div class="empty">เลือกเพจก่อนเพื่อแสดง SKU</div></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-label">ตัวเลขก่อนบันทึก</div>
+      <div class="preview-box" id="entry-preview">
+        <div style="color:var(--muted);font-size:12px">กรอกออเดอร์แล้วจะแสดงที่นี่</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-success" onclick="saveEntry()">💾 บันทึก</button>
+      <button class="btn btn-ghost" onclick="clearEntry()">ล้าง</button>
+    </div>
+    <div id="entry-msg" style="margin-top:10px;font-size:13px"></div>
+  </div>
+
+  <!-- Test ads — standalone, day-level only, not tied to any page -->
+  <div class="card" style="max-width:720px">
+    <div class="card-title">
+      ค่าแอดเทสสินค้า
+      <span>เงินที่เสียไปฟรี ยังไม่มียอดขาย — ใส่ตามวันที่ ไม่ต้องเลือกเพจ</span>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>วันที่เทส</label>
+      <input type="date" id="t-date" style="width:152px">
+    </div>
+    <div id="test-rows"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addTestRow()" style="margin-top:4px">+ เพิ่มรายการเทส</button>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-success" onclick="saveTests()">💾 บันทึกค่าเทส</button>
+    </div>
+    <div id="test-msg" style="margin-top:10px;font-size:13px"></div>
+  </div>
+</div>
+
+<!-- ════ HISTORY ════ -->
+<div id="page-history" class="page">
+  <div class="topbar">
+
+    <div class="topbar-left"><h2>ประวัติยอดขาย</h2></div>
+  </div>
+  <div class="filter-bar" style="margin-bottom:16px">
+    <span class="filter-label">จาก</span>
+    <input type="date" class="filter-input" id="h-start">
+    <span class="filter-label">ถึง</span>
+    <input type="date" class="filter-input" id="h-end">
+    <span class="filter-label">เพจ</span>
+    <select class="filter-sel" id="h-page"><option value="">ทุกเพจ</option></select>
+    <button class="btn btn-primary btn-sm" onclick="renderHistory()">ค้นหา</button>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table id="hist-tbl"></table></div>
+  </div>
+</div>
+
+<!-- ════ SKU MANAGER ════ -->
+<div id="page-skumgr" class="page">
+  <div class="topbar">
+    <div class="topbar-left"><h2>จัดการ SKU</h2><p>ตั้งค่าต้นทุนครั้งเดียว ระบบคำนวณให้ทุกวัน</p></div>
+  </div>
+  <div class="grid2">
+    <!-- Add page -->
+    <div class="card">
+      <div class="card-title">เพิ่มเพจใหม่</div>
+      <div class="frow">
+        <div class="fg" style="flex:1">
+          <label>ชื่อเพจ</label>
+          <input type="text" id="pg-name" placeholder="เช่น ร้านครีมสวย">
+        </div>
+        <div class="fg">
+          <label>สี</label>
+          <input type="color" id="pg-color" value="#3b82f6" style="width:44px;height:38px;padding:2px;border-radius:8px">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addPage()">+ เพิ่มเพจ</button>
+      <div id="pg-msg" style="margin-top:8px;font-size:12px"></div>
+      <div style="margin-top:16px">
+        <div class="tbl-wrap"><table id="pages-tbl"></table></div>
+      </div>
+    </div>
+    <!-- Add SKU -->
+    <div class="card">
+      <div class="card-title">เพิ่ม SKU ใหม่</div>
+      <div class="frow">
+        <div class="fg" style="flex:1">
+          <label>เพจ</label>
+          <select id="sku-page"><option value="">— เลือก —</option></select>
+        </div>
+        <div class="fg" style="flex:1">
+          <label>ชื่อ SKU</label>
+          <input type="text" id="sku-name" placeholder="เช่น ครีมกันแดด">
+        </div>
+      </div>
+      <div class="form-section-label" style="margin-top:4px">ราคา & ต้นทุนสินค้า</div>
+      <div class="frow">
+        <div class="fg">
+          <label>ชิ้น/ออเดอร์</label>
+          <input type="number" id="sku-pieces" value="1" style="width:100px">
+        </div>
+        <div class="fg">
+          <label>ราคา/ออเดอร์ (฿)</label>
+          <input type="number" id="sku-price" value="0" style="width:130px">
+        </div>
+        <div class="fg">
+          <label>ต้นทุน/ชิ้น (฿)</label>
+          <input type="number" id="sku-cost" value="0" style="width:120px">
+        </div>
+      </div>
+      <div class="form-section-label">ต้นทุนปฏิบัติการ (fix ต่อออเดอร์)</div>
+      <div class="frow">
+        <div class="fg">
+          <label>ค่าส่ง (฿)</label>
+          <input type="number" id="sku-ship" value="0" style="width:100px">
+        </div>
+        <div class="fg">
+          <label>ค่าแพ็ค (฿)</label>
+          <input type="number" id="sku-pack" value="0" style="width:100px">
+        </div>
+        <div class="fg">
+          <label>ค่าแอดมิน (฿)</label>
+          <input type="number" id="sku-admin" value="0" style="width:100px">
+        </div>
+        <div class="fg">
+          <label>COD (%)</label>
+          <div class="suf">
+            <input type="number" id="sku-cod" value="0" step="0.1" style="width:90px">
+            <span>%</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addSku()">+ เพิ่ม SKU</button>
+      <div id="sku-msg" style="margin-top:8px;font-size:12px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">รายการ SKU ทั้งหมด</div>
+    <div class="tbl-wrap"><table id="skus-tbl"></table></div>
+  </div>
+</div>
+
+<!-- ════ RETURNS ════ -->
+<div id="page-returns" class="page">
+  <div class="topbar">
+    <div class="topbar-left"><h2>ตีกลับ</h2><p>บันทึกค่าเสียหายจากพัสดุตีกลับรายเดือน</p></div>
+  </div>
+  <div class="card" style="max-width:600px;margin-bottom:16px">
+    <div class="card-title">บันทึกตีกลับ</div>
+    <div class="frow">
+      <div class="fg">
+        <label>เดือน</label>
+        <input type="month" id="ret-month" style="width:148px">
+      </div>
+      <div class="fg">
+        <label>เพจ</label>
+        <select id="ret-page" style="min-width:160px"><option value="">— เลือก —</option></select>
+      </div>
+      <div class="fg">
+        <label>จำนวนตีกลับ (ออเดอร์)</label>
+        <input type="number" id="ret-orders" value="0" style="width:140px">
+      </div>
+      <div class="fg">
+        <label>ค่าเสียหาย/ออเดอร์ (฿)</label>
+        <input type="number" id="ret-cost" value="0" style="width:140px">
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="saveReturn()">💾 บันทึกตีกลับ</button>
+    <div id="ret-msg" style="margin-top:8px;font-size:12px"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">รายการตีกลับ</div>
+    <div class="tbl-wrap"><table id="ret-tbl"></table></div>
+  </div>
+</div>
+
+</main><!-- end main -->
+</div><!-- end app -->
+
+<!-- Edit SKU Modal -->
+<div class="modal" id="modal-edit-sku">
+  <div class="mbox">
+    <div class="mhead">
+      <h3>แก้ไข SKU</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-edit-sku')">ปิด</button>
+    </div>
+    <input type="hidden" id="esk-id">
+    <div class="frow">
+      <div class="fg" style="flex:1"><label>เพจ</label><select id="esk-page"></select></div>
+      <div class="fg" style="flex:1"><label>ชื่อ SKU</label><input type="text" id="esk-name"></div>
+    </div>
+    <div class="form-section-label">ราคา & ต้นทุนสินค้า</div>
+    <div class="frow">
+      <div class="fg"><label>ชิ้น/ออเดอร์</label><input type="number" id="esk-pieces" style="width:100px"></div>
+      <div class="fg"><label>ราคา/ออเดอร์</label><input type="number" id="esk-price" style="width:120px"></div>
+      <div class="fg"><label>ต้นทุน/ชิ้น</label><input type="number" id="esk-cost" style="width:120px"></div>
+    </div>
+    <div class="form-section-label">ต้นทุนปฏิบัติการ</div>
+    <div class="frow">
+      <div class="fg"><label>ค่าส่ง</label><input type="number" id="esk-ship" style="width:100px"></div>
+      <div class="fg"><label>ค่าแพ็ค</label><input type="number" id="esk-pack" style="width:100px"></div>
+      <div class="fg"><label>ค่าแอดมิน</label><input type="number" id="esk-admin" style="width:100px"></div>
+      <div class="fg"><label>COD %</label><div class="suf"><input type="number" id="esk-cod" step="0.1" style="width:90px"><span>%</span></div></div>
+    </div>
+    <button class="btn btn-success" onclick="updateSku()">บันทึก</button>
+  </div>
+</div>
+
+<!-- Edit Sale Modal -->
+<div class="modal" id="modal-edit-sale">
+  <div class="mbox">
+    <div class="mhead">
+      <h3>แก้ไขรายการ</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-edit-sale')">ปิด</button>
+    </div>
+    <input type="hidden" id="es-id">
+    <div class="frow">
+      <div class="fg"><label>วันที่</label><input type="date" id="es-date"></div>
+      <div class="fg" style="flex:1"><label>เพจ</label><select id="es-page" onchange="renderEditSkuInputs()"></select></div>
+      <div class="fg"><label>ค่า Ads</label><input type="number" id="es-ads" style="width:120px"></div>
+    </div>
+    <div class="form-section-label" style="margin-top:8px">ออเดอร์ต่อ SKU</div>
+    <div id="es-sku-inputs" class="sku-order-grid"></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-success" onclick="updateSale()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  API LAYER (แทน localStorage)
+// ══════════════════════════════════════════
+let _token = localStorage.getItem('abp_token') || '';
+let _user  = null;
+
+let pages   = [];
+let skus    = [];
+let sales   = [];
+let returns = [];
+let tests   = [];
+
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json','Authorization':'Bearer '+_token} };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api'+path, opts);
+  if(res.status===401){ logout(); return null; }
+  return res.json();
+}
+const apiGET    = p     => api('GET',    p);
+const apiPOST   = (p,b) => api('POST',  p, b);
+const apiPUT    = (p,b) => api('PUT',   p, b);
+const apiDEL    = p     => api('DELETE', p);
+
+async function loadAll(start, end) {
+  if(!start){ const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0'); start=`${y}-${m}-01`; end=now.toISOString().slice(0,10); }
+  const [p,s,sa,re,te] = await Promise.all([
+    apiGET('/pages'), apiGET('/skus'),
+    apiGET(`/sales?start=${start}&end=${end}`),
+    apiGET('/returns'),
+    apiGET(`/tests?start=${start}&end=${end}`),
+  ]);
+  pages=p||[]; skus=s||[]; sales=sa||[]; returns=re||[]; tests=te||[];
+}
+
+function logout(){ localStorage.removeItem('abp_token'); _token=''; _user=null; showLoginScreen(); }
+
+function showLoginScreen(){
+  document.querySelector('.app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+function hideLoginScreen(){
+  document.getElementById('login-screen').style.display='none';
+  document.querySelector('.app').style.display='grid';
+}
+
+async function doLogin(){
+  const email=$('l-email').value.trim(), password=$('l-password').value, msg=$('l-msg');
+  msg.textContent='';
+  if(!email||!password){ msg.textContent='กรอก email และ password ด้วย'; return; }
+  const data = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})}).then(r=>r.json());
+  if(data.error){ msg.textContent=data.error; return; }
+  _token=data.token; _user=data.user;
+  localStorage.setItem('abp_token',_token);
+  await initApp();
+}
+
+async function initApp(){
+  hideLoginScreen();
+  await loadAll();
+  const isAdmin = _user?.role==='admin';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
+  const info=$('sb-user-info');
+  if(info) info.textContent=(_user?.name||_user?.email)+' · '+(isAdmin?'Admin':'Staff');
+  refreshSelects();
+  renderDash();
+  if(!isAdmin){ goPage('entry',document.querySelector('.nav-btn[onclick*=\'entry\']')); }
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+const uid  = () => Math.random().toString(36).slice(2,10);
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const today = () => new Date().toISOString().slice(0,10);
+const thisMonth = () => new Date().toISOString().slice(0,7);
+
+function fmt(n){
+  const abs = Math.abs(n||0).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:0});
+  return (n<0?'-':'')+'฿'+abs;
+}
+function pct(n){ return isFinite(n)?(+n).toFixed(1)+'%':'—' }
+
+function toast(msg,color='var(--green)'){
+  const t=$('toast'); t.textContent=msg; t.style.color=color; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function openModal(id){ $(id).classList.add('show') }
+function closeModal(id){ $(id).classList.remove('show') }
+
+function mkTable(headers,rows,emptyMsg='ยังไม่มีข้อมูล'){
+  return `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+  <tbody>${rows.length
+    ? rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${headers.length}" class="empty">${emptyMsg}</td></tr>`
+  }</tbody>`;
+}
+
+// ══════════════════════════════════════════
+//  CALC — single source of truth
+// ══════════════════════════════════════════
+function calcItem(sku, orders){
+  orders = +orders || 0;
+  const pieces      = orders * (+sku.pieces||1);
+  const revenue     = orders * (+sku.price||0);
+  const prodCost    = pieces * (+sku.cost||0);
+  const ship        = orders * (+sku.ship||0);
+  const pack        = orders * (+sku.pack||0);
+  const admin       = orders * (+(sku.admin_fee??sku.admin)||0);
+  const cod         = revenue * ((+(sku.cod_pct??sku.cod)||0)/100);
+  const opsCost     = ship+pack+admin+cod;
+  const totalCost   = prodCost+opsCost;
+  return {orders,pieces,revenue,prodCost,ship,pack,admin,cod,opsCost,totalCost};
+}
+
+function calcRecord(rec, skuFilter=''){
+  let t = {orders:0,pieces:0,revenue:0,prodCost:0,ship:0,pack:0,admin:0,cod:0,opsCost:0,totalCost:0,ads:+rec.ads||0};
+  parseItems(rec).filter(it=>!skuFilter||it.skuId===skuFilter).forEach(it=>{
+    const sku = skuById(it.skuId);
+    if(!sku) return;
+    const c = calcItem(sku, it.orders);
+    for(const k of ['orders','pieces','revenue','prodCost','ship','pack','admin','cod','opsCost','totalCost']) t[k]+=c[k];
+  });
+  if(!skuFilter) t.totalCost += t.ads;
+  t.profit = t.revenue - t.totalCost;
+  return t;
+}
+
+function parseItems(r){ try{ return JSON.parse(r.items||'[]') }catch{ return [] } }
+const skuById = id => skus.find(s=>s.id===id);
+const pageById = id => pages.find(p=>p.id===id);
+const pageName = id => pageById(id)?.name || '-';
+const skuPage = s => pageName(s.page_id||s.pageId);
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function goPage(name, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  refreshSelects();
+  if(name==='dashboard') renderDash();
+  if(name==='entry')     { setEntryDefaults(); renderSkuInputs(); }
+  if(name==='history')   { setHistDefaults(); renderHistory(); }
+  if(name==='skumgr')    renderSkuMgr();
+  if(name==='returns')   { setReturnDefaults(); renderReturns(); }
+}
+
+// ══════════════════════════════════════════
+//  SELECT POPULATION
+// ══════════════════════════════════════════
+function refreshSelects(){
+  const pageOpts = pages.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const allOpt   = '<option value="">ทุกเพจ</option>';
+  const chooseOpt= '<option value="">— เลือกเพจ —</option>';
+
+  // dashboard
+  if($('f-page'))   $('f-page').innerHTML   = allOpt+pageOpts;
+  if($('h-page'))   $('h-page').innerHTML   = allOpt+pageOpts;
+  if($('e-page'))   $('e-page').innerHTML   = chooseOpt+pageOpts;
+  if($('ret-page')) $('ret-page').innerHTML = chooseOpt+pageOpts;
+  if($('sku-page')) $('sku-page').innerHTML = chooseOpt+pageOpts;
+  // modal selects
+  if($('es-page'))  $('es-page').innerHTML  = chooseOpt+pageOpts;
+  if($('esk-page')) $('esk-page').innerHTML = chooseOpt+pageOpts;
+}
+
+// ══════════════════════════════════════════
+//  DASHBOARD MODE
+// ══════════════════════════════════════════
+let dashMode = 'today';
+let donutChart = null;
+
+function setMode(m, el){
+  dashMode = m;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  $('fc-today').style.display = m==='today' ? 'flex':'none';
+  $('fc-month').style.display = m==='month' ? 'flex':'none';
+  $('fc-range').style.display = m==='range' ? 'flex':'none';
+  renderDash();
+}
+
+function getDashRecords(){
+  const pageId = $('f-page')?.value||'';
+  let start, end;
+  if(dashMode==='today'){
+    start = end = $('f-date')?.value||today();
+  } else if(dashMode==='month'){
+    const m = $('f-month')?.value||thisMonth();
+    const [y,mo] = m.split('-');
+    start = `${y}-${mo}-01`;
+    end   = new Date(+y,+mo,0).toISOString().slice(0,10);
+  } else {
+    start = $('f-start')?.value||'';
+    end   = $('f-end')?.value||'';
+  }
+  return sales.filter(r=>{
+    if(start&&r.date<start) return false;
+    if(end  &&r.date>end)   return false;
+    if(pageId&&r.pageId!==pageId) return false;
+    return true;
+  });
+}
+
+function getDashTests(){
+  // Test ads are not tied to any page — only show them in "ทุกเพจ" (all pages) view
+  const pageId = $('f-page')?.value||'';
+  if(pageId) return [];
+  let start, end;
+  if(dashMode==='today'){
+    start = end = $('f-date')?.value||today();
+  } else if(dashMode==='month'){
+    const m = $('f-month')?.value||thisMonth();
+    const [y,mo] = m.split('-');
+    start = `${y}-${mo}-01`;
+    end   = new Date(+y,+mo,0).toISOString().slice(0,10);
+  } else {
+    start = $('f-start')?.value||'';
+    end   = $('f-end')?.value||'';
+  }
+  return tests.filter(t=>{
+    if(start&&t.date<start) return false;
+    if(end  &&t.date>end)   return false;
+    return true;
+  });
+}
+
+function renderDash(){
+  const records  = getDashRecords();
+  const testRecs = getDashTests();
+  const pageId   = $('f-page')?.value||'';
+  const pageLabel= pageId ? (pageById(pageId)?.name||pageId) : 'ทุกเพจ';
+  $('dash-subtitle').textContent = pageLabel;
+
+  // returns for this period
+  let retMonth = '';
+  if(dashMode==='month') retMonth = $('f-month')?.value||thisMonth();
+  else if(dashMode==='today') retMonth = ($('f-date')?.value||today()).slice(0,7);
+
+  const retCost = returns.filter(r=>{
+    const mo = r.month||'';
+    if(dashMode==='today'||dashMode==='month') return mo===retMonth && (!pageId||r.pageId===pageId);
+    return !pageId||r.pageId===pageId;
+  }).reduce((s,r)=>s+(+r.returnOrders||0)*(+r.costPerReturn||0),0);
+
+  let tot = {orders:0,revenue:0,prodCost:0,ship:0,pack:0,admin:0,cod:0,ads:0,totalCost:0,profit:0};
+  records.forEach(r=>{
+    const c=calcRecord(r);
+    for(const k of ['orders','revenue','prodCost','ship','pack','admin','cod','ads','totalCost']) tot[k]+=c[k];
+  });
+  const testTotal = testRecs.reduce((s,t)=>s+(+t.amount||0),0);
+  tot.totalCost += retCost + testTotal;
+  tot.profit = tot.revenue - tot.totalCost;
+  tot.margin = tot.revenue ? tot.profit/tot.revenue*100 : 0;
+  const roas = tot.ads>0 ? (tot.revenue/tot.ads).toFixed(2) : '—';
+
+  $('k-rev').textContent   = fmt(tot.revenue);
+  $('k-ads').textContent   = fmt(tot.ads);
+  $('k-test').textContent  = fmt(testTotal);
+  $('k-test-sub').textContent = pageId ? 'ดูได้เฉพาะ "ทุกเพจ"' : (testRecs.length ? testRecs.length+' รายการเทส' : 'เทสยังไม่ขาย');
+  $('k-cost').textContent  = fmt(tot.totalCost);
+  $('k-profit').textContent= fmt(tot.profit);
+  $('k-orders').textContent= tot.orders+' ออเดอร์';
+  $('k-roas').textContent  = 'ROAS '+roas;
+  $('k-cost-sub').textContent = `สินค้า ${fmt(tot.prodCost)} + ops ${fmt(tot.ship+tot.pack+tot.admin+tot.cod)}`;
+  $('k-margin').textContent= 'Margin '+pct(tot.margin);
+
+  const profEl = $('k-profit');
+  profEl.className = 'kpi-value mono '+(tot.profit>=0?'up':'dn');
+  const stEl = $('k-status');
+  if(!records.length){ stEl.innerHTML='<span class="badge badge-b">รอข้อมูล</span>'; $('k-status-sub').textContent=''; }
+  else if(tot.profit>=0){ stEl.innerHTML='<span class="badge badge-g">✓ กำไร</span>'; $('k-status-sub').textContent='+'+fmt(tot.profit); }
+  else { stEl.innerHTML='<span class="badge badge-r">⚠ ขาดทุน</span>'; $('k-status-sub').textContent=fmt(tot.profit); }
+
+  // Cost table
+  const rows=[
+    ['ยอดขาย',tot.revenue,100],
+    ['ต้นทุนสินค้า',tot.prodCost,tot.revenue?tot.prodCost/tot.revenue*100:0],
+    ['ค่า Ads',tot.ads,tot.revenue?tot.ads/tot.revenue*100:0],
+    ['ค่าเทสแอด',testTotal,tot.revenue?testTotal/tot.revenue*100:0],
+    ['ค่าส่ง',tot.ship,tot.revenue?tot.ship/tot.revenue*100:0],
+    ['ค่าแพ็ค',tot.pack,tot.revenue?tot.pack/tot.revenue*100:0],
+    ['ค่าแอดมิน',tot.admin,tot.revenue?tot.admin/tot.revenue*100:0],
+    ['COD',tot.cod,tot.revenue?tot.cod/tot.revenue*100:0],
+    ['ตีกลับ',retCost,tot.revenue?retCost/tot.revenue*100:0],
+    ['กำไรสุทธิ',tot.profit,tot.margin],
+  ];
+  $('cost-tbl').innerHTML = mkTable(['รายการ','มูลค่า','%'],
+    rows.map(r=>[r[0], `<span class="mono ${r[2]<0?'r':''}">${fmt(r[1])}</span>`, `<span class="mono ${r[2]<0?'r':r[0]==='กำไรสุทธิ'&&r[1]>=0?'g':''}">${pct(r[2])}</span>`])
+  );
+
+  // Donut
+  renderDonut(tot, retCost, testTotal);
+
+  // Test ads log
+  $('test-tbl').innerHTML = mkTable(
+    ['วันที่','สินค้าที่เทส','ค่าแอด','จัดการ'],
+    testRecs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(t=>[
+      t.date, esc(t.name||'—'),
+      `<span class="r mono">${fmt(t.amount)}</span>`,
+      `<button class="btn btn-danger btn-sm" onclick="deleteTest('${t.id}')">ลบ</button>`
+    ]),
+    'ยังไม่มีรายการเทสแอดในช่วงนี้'
+  );
+
+  // Daily table
+  $('daily-tbl').innerHTML = mkTable(
+    ['วันที่','เพจ','ออเดอร์','ยอดขาย','Ads','กำไรสุทธิ'],
+    records.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{
+      const c=calcRecord(r);
+      return [r.date, esc(pageName(r.pageId)), c.orders, fmt(c.revenue), `<span class="r mono">${fmt(c.ads)}</span>`,
+        `<span class="mono ${c.profit>=0?'g':'r'}">${fmt(c.profit)}</span>`];
+    })
+  );
+
+  // SKU summary
+  const skuMap={};
+  records.forEach(r=>parseItems(r).forEach(it=>{
+    const sku=skuById(it.skuId); if(!sku)return;
+    const c=calcItem(sku,it.orders);
+    if(!skuMap[it.skuId]) skuMap[it.skuId]={name:sku.name,page:pageName(sku.pageId),orders:0,revenue:0,totalCost:0,profit:0};
+    skuMap[it.skuId].orders+=c.orders;
+    skuMap[it.skuId].revenue+=c.revenue;
+    skuMap[it.skuId].totalCost+=c.totalCost;
+    skuMap[it.skuId].profit+=c.revenue-c.totalCost;
+  }));
+  const skuRows=Object.values(skuMap).sort((a,b)=>b.profit-a.profit);
+  $('sku-tbl').innerHTML=mkTable(
+    ['เพจ','SKU','ออเดอร์','ยอดขาย','ต้นทุน (ไม่รวมAds)','กำไรก่อนหักAds'],
+    skuRows.map(x=>[esc(x.page),esc(x.name),x.orders,fmt(x.revenue),`<span class="r mono">${fmt(x.totalCost)}</span>`,
+      `<span class="mono ${x.profit>=0?'g':'r'}">${fmt(x.profit)}</span>`])
+  );
+}
+
+function renderDonut(tot,retCost,testTotal=0){
+  const ctx=$('donut-chart');
+  if(!ctx)return;
+  const vals=[tot.prodCost,tot.ads,testTotal,tot.ship,tot.pack,tot.admin,tot.cod,retCost,Math.max(tot.profit,0)];
+  const labels=['ต้นทุนสินค้า','ค่า Ads','ค่าเทสแอด','ค่าส่ง','ค่าแพ็ค','ค่าแอดมิน','COD','ตีกลับ','กำไร'];
+  const colors=['#3b82f6','#ef4444','#f97316','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#fb7185','#10b981'];
+  if(donutChart) donutChart.destroy();
+  donutChart=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals.every(v=>v===0)?[1]:vals,backgroundColor:colors,borderWidth:0}]},
+    options:{
+      cutout:'65%',
+      plugins:{legend:{labels:{color:'#8ba3c0',font:{size:11},boxWidth:10,padding:10}}},
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  ENTRY
+// ══════════════════════════════════════════
+function setEntryDefaults(){
+  if(!$('e-date').value) $('e-date').value=today();
+  if(!$('t-date').value) $('t-date').value=today();
+  if(!$('test-rows').children.length) addTestRow();
+}
+
+function renderSkuInputs(){
+  const pageId=$('e-page').value;
+  const container=$('sku-inputs');
+  const filtered=skus.filter(s=>s.page_id===pageId||s.pageId===pageId);
+  if(!pageId){ container.innerHTML='<div class="empty">เลือกเพจก่อนเพื่อแสดง SKU</div>'; updatePreview(); return; }
+  if(!filtered.length){ container.innerHTML='<div class="empty">ยังไม่มี SKU ในเพจนี้ — เพิ่มใน "จัดการ SKU"</div>'; updatePreview(); return; }
+  container.innerHTML=`<div class="sku-order-grid">${filtered.map(s=>`
+    <div class="sku-order-item">
+      <div class="sku-name">${esc(s.name)}</div>
+      <div class="sku-meta">${fmt(s.price)}/ออเดอร์ · ทุน ${fmt(s.cost)}/ชิ้น · ส่ง ${fmt(s.ship)}</div>
+      <input type="number" class="sku-qty" data-sku="${s.id}" value="0" min="0" oninput="updatePreview()" placeholder="ออเดอร์">
+    </div>`).join('')}</div>`;
+}
+
+// ── Test ad rows (per-entry, not tied to any SKU) ──
+function addTestRow(name='', amount=''){
+  const container=$('test-rows');
+  const row=document.createElement('div');
+  row.className='test-row';
+  row.innerHTML=`
+    <input type="text" class="test-name" placeholder="ชื่อสินค้าที่เทส" value="${esc(name)}" oninput="updatePreview()">
+    <div class="suf"><input type="number" class="test-amount" placeholder="0" min="0" value="${amount}" oninput="updatePreview()" style="padding-right:24px"><span>฿</span></div>
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();updatePreview()">ลบ</button>
+  `;
+  container.appendChild(row);
+}
+
+function getTestItems(){
+  return [...document.querySelectorAll('#test-rows .test-row')].map(row=>({
+    name: row.querySelector('.test-name').value.trim(),
+    amount: +row.querySelector('.test-amount').value || 0,
+  })).filter(t=>t.name || t.amount>0);
+}
+
+function getTestTotal(){
+  return getTestItems().reduce((s,t)=>s+t.amount,0);
+}
+
+function getEntryItems(){
+  return [...document.querySelectorAll('.sku-qty')]
+    .map(i=>({skuId:i.dataset.sku,orders:+i.value||0}))
+    .filter(x=>x.orders>0);
+}
+
+function updatePreview(){
+  const ads=+$('e-ads').value||0;
+  const items=getEntryItems();
+  if(!items.length&&!ads){
+    $('entry-preview').innerHTML='<div style="color:var(--muted);font-size:12px">กรอกออเดอร์แล้วจะแสดงที่นี่</div>';
+    return;
+  }
+  let tot={orders:0,revenue:0,prodCost:0,ship:0,pack:0,admin:0,cod:0,opsCost:0};
+  items.forEach(it=>{
+    const sku=skuById(it.skuId); if(!sku)return;
+    const c=calcItem(sku,it.orders);
+    for(const k of ['orders','revenue','prodCost','ship','pack','admin','cod','opsCost']) tot[k]+=c[k];
+  });
+  const totalCost=tot.prodCost+tot.opsCost+ads;
+  const profit=tot.revenue-totalCost;
+  const roas=ads>0?(tot.revenue/ads).toFixed(2):'—';
+  const items2=[
+    {label:'ยอดขาย',    val:fmt(tot.revenue), cls:''},
+    {label:'ต้นทุนสินค้า',val:fmt(tot.prodCost),cls:'r'},
+    {label:'ค่า Ads',   val:fmt(ads),         cls:'r'},
+    {label:'ค่าส่ง',    val:fmt(tot.ship),    cls:'r'},
+    {label:'ค่าแพ็ค',   val:fmt(tot.pack),    cls:'r'},
+    {label:'ค่าแอดมิน', val:fmt(tot.admin),   cls:'r'},
+    {label:'COD',       val:fmt(tot.cod),     cls:'r'},
+    {label:'กำไรสุทธิ', val:fmt(profit),      cls:profit>=0?'g':'r'},
+    {label:'ROAS',      val:roas,             cls:''},
+  ];
+  $('entry-preview').innerHTML=items2.map(x=>`<div class="pv-item">
+    <div class="pv-label">${x.label}</div>
+    <div class="pv-val ${x.cls}">${x.val}</div>
+  </div>`).join('');
+}
+
+async function saveEntry(){
+  const date=$('e-date').value, page_id=$('e-page').value, ads=+$('e-ads').value||0;
+  const items=getEntryItems();
+  if(!date||!page_id){ toast('เลือกวันที่และเพจก่อน','var(--red)'); return; }
+  if(!items.length&&!ads){ toast('กรอกออเดอร์หรือค่า Ads อย่างน้อย 1 อย่าง','var(--red)'); return; }
+  const data=await apiPOST('/sales',{date,page_id,ads,items});
+  if(!data||data.error){toast('บันทึกไม่ได้: '+data?.error,'var(--red)');return;}
+  sales.push(data);
+  toast('บันทึกแล้ว ✓'); clearEntry();
+}
+
+function clearEntry(){
+  $('e-ads').value=0;
+  document.querySelectorAll('.sku-qty').forEach(i=>i.value=0);
+  updatePreview();
+  $('entry-msg').textContent='';
+}
+
+// ── Test ads: independent save, no page required ──
+async function saveTests(){
+  const date=$('t-date').value;
+  const testItems=getTestItems();
+  if(!date){ toast('เลือกวันที่ก่อน','var(--red)'); return; }
+  if(!testItems.length){ toast('กรอกค่าเทสอย่างน้อย 1 รายการ','var(--red)'); return; }
+  for(const t of testItems){
+    const data=await apiPOST('/tests',{date,name:t.name,amount:t.amount});
+    if(data&&!data.error) tests.push(data);
+  }
+  toast('บันทึกค่าเทสแล้ว ✓'); clearTests();
+}
+
+function clearTests(){
+  $('test-rows').innerHTML='';
+  addTestRow();
+  $('test-msg').textContent='';
+}
+
+// ══════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════
+function setHistDefaults(){
+  const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
+  $('h-start').value=`${y}-${m}-01`;
+  $('h-end').value=today();
+}
+function renderHistory(){
+  const start=$('h-start').value, end=$('h-end').value, pageId=$('h-page').value;
+  const data=sales.filter(r=>{
+    if(start&&r.date<start)return false;
+    if(end&&r.date>end)return false;
+    if(pageId&&r.pageId!==pageId)return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+  $('hist-tbl').innerHTML=mkTable(
+    ['วันที่','เพจ','ออเดอร์','ยอดขาย','Ads','กำไรสุทธิ','จัดการ'],
+    data.map(r=>{
+      const c=calcRecord(r);
+      return [r.date,esc(pageName(r.pageId)),c.orders,fmt(c.revenue),
+        `<span class="r mono">${fmt(c.ads)}</span>`,
+        `<span class="mono ${c.profit>=0?'g':'r'}">${fmt(c.profit)}</span>`,
+        `<button class="btn btn-ghost btn-sm" onclick="openEditSale('${r.id}')">แก้ไข</button>
+         <button class="btn btn-danger btn-sm" onclick="deleteSale('${r.id}')">ลบ</button>`
+      ];
+    })
+  );
+}
+async function deleteSale(id){
+  if(!confirm('ลบรายการนี้?'))return;
+  await apiDEL('/sales/'+id);
+  sales=sales.filter(s=>s.id!==id); renderHistory(); toast('ลบแล้ว');
+}
+async function deleteTest(id){
+  if(!confirm('ลบรายการเทสแอดนี้?'))return;
+  await apiDEL('/tests/'+id);
+  tests=tests.filter(t=>t.id!==id); renderDash(); toast('ลบแล้ว');
+}
+function openEditSale(id){
+  const r=sales.find(s=>s.id===id); if(!r)return;
+  $('es-id').value=id; $('es-date').value=r.date;
+  $('es-page').value=r.pageId; $('es-ads').value=r.ads;
+  renderEditSkuInputs(r);
+  openModal('modal-edit-sale');
+}
+function renderEditSkuInputs(record=null){
+  const pageId=$('es-page').value;
+  const items=record?parseItems(record):parseItems(sales.find(s=>s.id===$('es-id').value)||{});
+  const qty={}; items.forEach(i=>qty[i.skuId]=i.orders);
+  const filtered=skus.filter(s=>s.page_id===pageId||s.pageId===pageId);
+  $('es-sku-inputs').innerHTML=filtered.map(s=>`<div class="sku-order-item">
+    <div class="sku-name">${esc(s.name)}</div>
+    <input type="number" class="es-qty" data-sku="${s.id}" value="${qty[s.id]||0}" min="0">
+  </div>`).join('')||'<div class="empty">ยังไม่มี SKU</div>';
+}
+async function updateSale(){
+  const id=$('es-id').value;
+  const items=[...document.querySelectorAll('.es-qty')].map(i=>({skuId:i.dataset.sku,orders:+i.value||0})).filter(x=>x.orders>0);
+  const body={date:$('es-date').value,page_id:$('es-page').value,ads:+$('es-ads').value||0,items};
+  const data=await apiPUT('/sales/'+id,body);
+  if(!data||data.error){toast('แก้ไขไม่ได้: '+data?.error,'var(--red)');return;}
+  const idx=sales.findIndex(s=>s.id===id); if(idx>=0) sales[idx]={...sales[idx],...data};
+  closeModal('modal-edit-sale'); renderHistory(); toast('แก้ไขแล้ว');
+}
+
+// ══════════════════════════════════════════
+//  SKU MANAGER
+// ══════════════════════════════════════════
+async function addPage(){
+  const name=$('pg-name').value.trim(), color=$('pg-color').value;
+  if(!name){ $('pg-msg').textContent='ใส่ชื่อเพจด้วย'; return; }
+  const data = await apiPOST('/pages',{name,color});
+  if(!data||data.error){ $('pg-msg').textContent=data?.error||'เกิดข้อผิดพลาด'; return; }
+  pages.push(data);
+  $('pg-name').value=''; $('pg-msg').textContent='';
+  refreshSelects(); renderSkuMgr(); toast('เพิ่มเพจแล้ว');
+}
+async function deletePage(id){
+  if(!confirm('ลบเพจและ SKU ทั้งหมดในเพจนี้?'))return;
+  await apiDEL('/pages/'+id);
+  pages=pages.filter(p=>p.id!==id);
+  skus=skus.filter(s=>s.page_id!==id);
+  refreshSelects(); renderSkuMgr(); toast('ลบแล้ว');
+}
+async function addSku(){
+  const page_id=$('sku-page').value, name=$('sku-name').value.trim();
+  if(!page_id||!name){ $('sku-msg').textContent='เลือกเพจและใส่ชื่อ SKU'; return; }
+  const body={page_id,name,
+    pieces:+$('sku-pieces').value||1, price:+$('sku-price').value||0,
+    cost:+$('sku-cost').value||0,     ship:+$('sku-ship').value||0,
+    pack:+$('sku-pack').value||0,     admin_fee:+$('sku-admin').value||0,
+    cod_pct:+$('sku-cod').value||0};
+  const data=await apiPOST('/skus',body);
+  if(!data||data.error){ $('sku-msg').textContent=data?.error||'เกิดข้อผิดพลาด'; return; }
+  skus.push(data); $('sku-name').value=''; $('sku-msg').textContent='';
+  renderSkuMgr(); toast('เพิ่ม SKU แล้ว');
+}
+function renderSkuMgr(){
+  $('pages-tbl').innerHTML=mkTable(['ชื่อเพจ','สี','จัดการ'],
+    pages.map(p=>[esc(p.name),
+      `<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${p.color}"></span>`,
+      `<button class="btn btn-danger btn-sm" onclick="deletePage('${p.id}')">ลบ</button>`
+    ]),'ยังไม่มีเพจ'
+  );
+  $('skus-tbl').innerHTML=mkTable(
+    ['เพจ','SKU','ชิ้น/ออ','ราคา','ทุน/ชิ้น','ส่ง','แพ็ค','แอดมิน','COD%','จัดการ'],
+    skus.map(s=>[esc(pageName(s.pageId)),esc(s.name),s.pieces,fmt(s.price),fmt(s.cost),
+      fmt(s.ship),fmt(s.pack),fmt(s.admin),s.cod+'%',
+      `<button class="btn btn-ghost btn-sm" onclick="openEditSku('${s.id}')">แก้ไข</button>
+       <button class="btn btn-danger btn-sm" onclick="deleteSku('${s.id}')">ลบ</button>`
+    ]),'ยังไม่มี SKU'
+  );
+}
+function openEditSku(id){
+  const s=skus.find(x=>x.id===id); if(!s)return;
+  $('esk-id').value=id; $('esk-page').value=s.pageId; $('esk-name').value=s.name;
+  $('esk-pieces').value=s.pieces; $('esk-price').value=s.price; $('esk-cost').value=s.cost;
+  $('esk-ship').value=s.ship; $('esk-pack').value=s.pack; $('esk-admin').value=s.admin; $('esk-cod').value=s.cod;
+  openModal('modal-edit-sku');
+}
+async function updateSku(){
+  const id=$('esk-id').value;
+  const body={name:$('esk-name').value,pieces:+$('esk-pieces').value||1,
+    price:+$('esk-price').value||0,cost:+$('esk-cost').value||0,
+    ship:+$('esk-ship').value||0,pack:+$('esk-pack').value||0,
+    admin_fee:+$('esk-admin').value||0,cod_pct:+$('esk-cod').value||0};
+  const data=await apiPUT('/skus/'+id,body);
+  if(!data||data.error){toast('แก้ไขไม่ได้: '+data?.error,'var(--red)');return;}
+  const idx=skus.findIndex(s=>s.id===id); if(idx>=0) skus[idx]={...skus[idx],...data};
+  closeModal('modal-edit-sku'); renderSkuMgr(); toast('แก้ไข SKU แล้ว');
+}
+async function deleteSku(id){
+  if(!confirm('ลบ SKU นี้?'))return;
+  await apiDEL('/skus/'+id);
+  skus=skus.filter(s=>s.id!==id); renderSkuMgr(); toast('ลบแล้ว');
+}
+
+// ══════════════════════════════════════════
+//  RETURNS
+// ══════════════════════════════════════════
+function setReturnDefaults(){
+  if(!$('ret-month').value) $('ret-month').value=thisMonth();
+}
+async function saveReturn(){
+  const month=$('ret-month').value, page_id=$('ret-page').value;
+  if(!month||!page_id){ toast('เลือกเดือนและเพจก่อน','var(--red)'); return; }
+  const data=await apiPOST('/returns',{month,page_id,return_orders:+$('ret-orders').value||0,cost_per_return:+$('ret-cost').value||0});
+  if(!data||data.error){toast('บันทึกไม่ได้: '+data?.error,'var(--red)');return;}
+  returns.push(data); renderReturns(); toast('บันทึกตีกลับแล้ว');
+}
+async function deleteReturn(id){
+  if(!confirm('ลบรายการตีกลับ?'))return;
+  await apiDEL('/returns/'+id);
+  returns=returns.filter(r=>r.id!==id); renderReturns(); toast('ลบแล้ว');
+}
+function renderReturns(){
+  $('ret-tbl').innerHTML=mkTable(
+    ['เดือน','เพจ','ตีกลับ (ออเดอร์)','ค่าเสียหาย/ออเดอร์','รวมเสียหาย','จัดการ'],
+    returns.slice().reverse().map(r=>{
+      const total=(+r.returnOrders||0)*(+r.costPerReturn||0);
+      return [r.month,esc(pageName(r.pageId)),r.returnOrders,fmt(r.costPerReturn),
+        `<span class="r mono">${fmt(total)}</span>`,
+        `<button class="btn btn-danger btn-sm" onclick="deleteReturn('${r.id}')">ลบ</button>`
+      ];
+    }),'ยังไม่มีรายการตีกลับ'
+  );
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // ตั้งค่า filter defaults
+  $('f-date').value = today();
+  $('f-month').value = thisMonth();
+  const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
+  $('f-start').value=`${y}-${m}-01`;
+  $('f-end').value=today();
+
+  // ตรวจ token ที่เก็บไว้
+  if(_token){
+    const data = await fetch('/api/auth/me',{headers:{'Authorization':'Bearer '+_token}}).then(r=>r.json()).catch(()=>null);
+    if(data?.user){
+      _user = data.user;
+      await initApp();
+      return;
+    }
+  }
+  showLoginScreen();
+});
+</script>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:32px;margin-bottom:12px">📈</div>
+    <h1>AdBoard Pro</h1>
+    <p>ระบบสรุปยอดแอด Facebook</p>
+    <div class="fg">
+      <label>Email</label>
+      <input type="email" id="l-email" placeholder="email@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" id="l-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <div id="l-msg"></div>
+  </div>
+</div>
+</body>
+</html>
