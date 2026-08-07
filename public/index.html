@@ -802,7 +802,11 @@ function calcRecord(rec, skuFilter=''){
   return t;
 }
 
-function parseItems(r){ try{ return JSON.parse(r.items||'[]') }catch{ return [] } }
+function parseItems(r){ 
+  if(!r.items) return [];
+  if(Array.isArray(r.items)) return r.items;
+  try{ return JSON.parse(r.items) }catch{ return [] } 
+}
 const skuById = id => skus.find(s=>s.id===id);
 const pageById = id => pages.find(p=>p.id===id);
 const pageName = id => pageById(id)?.name || '-';
