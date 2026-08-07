@@ -909,8 +909,9 @@ function getDashTests(){
 }
 
 async function renderDash(){
+  skus = await apiGET('/skus') || skus;
+pages = await apiGET('/pages') || pages;
   const records  = getDashRecords();
-  skus = (await apiGET('/skus')) || skus;
   const testRecs = getDashTests();
   const pageId   = $('f-page')?.value||'';
   const pageLabel= pageId ? (pageById(pageId)?.name||pageId) : 'ทุกเพจ';
