@@ -911,6 +911,8 @@ function getDashTests(){
 async function renderDash(){
   skus = await apiGET('/skus') || skus;
 pages = await apiGET('/pages') || pages;
+  const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
+  sales = await apiGET(`/sales?start=${y}-${m}-01&end=${y}-${m}-31`) || sales;
   const records  = getDashRecords();
   const testRecs = getDashTests();
   const pageId   = $('f-page')?.value||'';
