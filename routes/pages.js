@@ -5,7 +5,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/pages — ทุกคนดูได้
+// GET /api/pages — กรองตาม team_id เสมอ
 router.get('/', async (req, res) => {
   const { team_id } = req.query;
   let q = supabase.from('pages').select('*').order('created_at');
@@ -15,10 +15,11 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
-// POST /api/pages — admin เพิ่มเพจ
+// POST /api/pages — admin เพิ่มเพจ (บันทึก team_id ด้วย)
 router.post('/', requireAdmin, async (req, res) => {
-  const { name, color } = req.body;
-  const { data, error } = await supabase.from('pages').insert({ name, color }).select().single();
+  const { name, color, team_id } = req.body;
+  const { data, error } = await supabase
+    .from('pages').insert({ name, color, team_id }).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });

@@ -5,22 +5,33 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/skus — ทุกคนดูได้ (ต้องรู้ว่าสินค้ามีอะไรเพื่อกรอกยอด)
+// GET /api/skus — กรองตาม team_id โดยดู page_id ที่อยู่ในทีมนั้น
 router.get('/', async (req, res) => {
   const { team_id } = req.query;
-  let q = supabase.from('skus').select('*').order('created_at');
-  if (team_id) q = q.eq('team_id', team_id);
-  const { data, error } = await q;
+  if (team_id) {
+    // ดึง page_ids ที่อยู่ในทีมนี้ก่อน
+    const { data: pages, error: pErr } = await supabase
+      .from('pages').select('id').eq('team_id', team_id);
+    if (pErr) return res.status(500).json({ error: pErr.message });
+    const pageIds = (pages||[]).map(p=>p.id);
+    if (!pageIds.length) return res.json([]);
+    const { data, error } = await supabase
+      .from('skus').select('*').in('page_id', pageIds).order('created_at');
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+  // ไม่มี team_id → ดึงทั้งหมด
+  const { data, error } = await supabase.from('skus').select('*').order('created_at');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
 // POST /api/skus — admin เพิ่ม SKU
 router.post('/', requireAdmin, async (req, res) => {
-  const { page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct } = req.body;
+  const { page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct, team_id } = req.body;
   const { data, error } = await supabase
     .from('skus')
-    .insert({ page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct })
+    .insert({ page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct, team_id })
     .select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
