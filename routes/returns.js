@@ -7,16 +7,15 @@ router.use(requireAuth);
 
 // GET /api/returns?month=
 router.get('/', async (req, res) => {
-  const { month, team_id } = req.query;
+  const { month } = req.query;
   let q = supabase.from('returns').select('*, pages(name)').order('month', { ascending: false });
   if (month) q = q.eq('month', month);
-  if (team_id) q = q.eq('team_id', team_id);
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// POST /api/returns — admin เท่านั้น
+// POST /api/returns
 router.post('/', requireAdmin, async (req, res) => {
   const { month, page_id, return_orders, cost_per_return } = req.body;
   const { data, error } = await supabase
@@ -27,7 +26,7 @@ router.post('/', requireAdmin, async (req, res) => {
   res.json(data);
 });
 
-// DELETE /api/returns/:id — admin เท่านั้น
+// DELETE /api/returns/:id
 router.delete('/:id', requireAdmin, async (req, res) => {
   const { error } = await supabase.from('returns').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });

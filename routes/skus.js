@@ -5,39 +5,25 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/skus — กรองตาม team_id โดยดู page_id ที่อยู่ในทีมนั้น
+// GET /api/skus
 router.get('/', async (req, res) => {
-  const { team_id } = req.query;
-  if (team_id) {
-    // ดึง page_ids ที่อยู่ในทีมนี้ก่อน
-    const { data: pages, error: pErr } = await supabase
-      .from('pages').select('id').eq('team_id', team_id);
-    if (pErr) return res.status(500).json({ error: pErr.message });
-    const pageIds = (pages||[]).map(p=>p.id);
-    if (!pageIds.length) return res.json([]);
-    const { data, error } = await supabase
-      .from('skus').select('*').in('page_id', pageIds).order('created_at');
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json(data);
-  }
-  // ไม่มี team_id → ดึงทั้งหมด
   const { data, error } = await supabase.from('skus').select('*').order('created_at');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// POST /api/skus — admin เพิ่ม SKU
+// POST /api/skus
 router.post('/', requireAdmin, async (req, res) => {
-  const { page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct, team_id } = req.body;
+  const { page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct } = req.body;
   const { data, error } = await supabase
     .from('skus')
-    .insert({ page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct, team_id })
+    .insert({ page_id, name, pieces, price, cost, ship, pack, admin_fee, cod_pct })
     .select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
-// PUT /api/skus/:id — admin แก้ไข SKU
+// PUT /api/skus/:id
 router.put('/:id', requireAdmin, async (req, res) => {
   const { name, pieces, price, cost, ship, pack, admin_fee, cod_pct } = req.body;
   const { data, error } = await supabase
@@ -47,7 +33,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
   res.json(data);
 });
 
-// DELETE /api/skus/:id — admin ลบ SKU
+// DELETE /api/skus/:id
 router.delete('/:id', requireAdmin, async (req, res) => {
   const { error } = await supabase.from('skus').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });

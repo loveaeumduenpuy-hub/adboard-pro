@@ -6,23 +6,19 @@ const router = express.Router();
 router.use(requireAuth);
 
 // GET /api/sales?start=&end=&page_id=
-// admin เห็นทั้งหมด, staff เห็นเฉพาะที่ตัวเองกรอก
 router.get('/', async (req, res) => {
-  const { start, end, page_id, team_id } = req.query;
+  const { start, end, page_id } = req.query;
   let q = supabase.from('sales').select('*, pages(name)').order('date', { ascending: false });
-
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
   if (start)   q = q.gte('date', start);
   if (end)     q = q.lte('date', end);
   if (page_id) q = q.eq('page_id', page_id);
-  if (team_id) q = q.eq('team_id', team_id);
-
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// POST /api/sales — staff และ admin กรอกได้
+// POST /api/sales
 router.post('/', async (req, res) => {
   const { date, page_id, ads, items } = req.body;
   const { data, error } = await supabase
@@ -33,7 +29,7 @@ router.post('/', async (req, res) => {
   res.json(data);
 });
 
-// PUT /api/sales/:id — admin หรือคนที่กรอกเองแก้ไขได้
+// PUT /api/sales/:id
 router.put('/:id', async (req, res) => {
   const { date, page_id, ads, items } = req.body;
   let q = supabase.from('sales').update({ date, page_id, ads, items }).eq('id', req.params.id);
