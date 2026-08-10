@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
   if (start)   q = q.gte('date', start);
   if (end)     q = q.lte('date', end);
   if (page_id) q = q.eq('page_id', page_id);
-  if (team_id) q = q.eq('team_id', team_id);
+  if (team_id) { q = q.eq('team_id', team_id); } else { q = q.is('team_id', null); }
 
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
