@@ -1,35 +1,28 @@
 const express  = require('express');
 const supabase = require('../middleware/supabase');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/sales?start=&end=&page_id=
 router.get('/', async (req, res) => {
-  const { start, end, page_id } = req.query;
+  const { start, end, page_id, team_id } = req.query;
   let q = supabase.from('sales').select('*, pages(name)').order('date', { ascending: false });
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
   if (start)   q = q.gte('date', start);
   if (end)     q = q.lte('date', end);
   if (page_id) q = q.eq('page_id', page_id);
+  if (team_id) q = q.eq('team_id', team_id);
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
-// POST /api/sales
 router.post('/', async (req, res) => {
-  const { date, page_id, ads, items } = req.body;
-  const { data, error } = await supabase
-    .from('sales')
-    .insert({ date, page_id, ads, items, created_by: req.user.id })
-    .select().single();
+  const { date, page_id, ads, items, team_id } = req.body;
+  const { data, error } = await supabase.from('sales')
+    .insert({ date, page_id, ads, items, team_id, created_by: req.user.id }).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-
-// PUT /api/sales/:id
 router.put('/:id', async (req, res) => {
   const { date, page_id, ads, items } = req.body;
   let q = supabase.from('sales').update({ date, page_id, ads, items }).eq('id', req.params.id);
@@ -38,8 +31,6 @@ router.put('/:id', async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-
-// DELETE /api/sales/:id
 router.delete('/:id', async (req, res) => {
   let q = supabase.from('sales').delete().eq('id', req.params.id);
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
@@ -47,5 +38,4 @@ router.delete('/:id', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
-
 module.exports = router;

@@ -1,34 +1,27 @@
 const express  = require('express');
 const supabase = require('../middleware/supabase');
 const { requireAuth } = require('../middleware/auth');
-
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/tests?start=&end=
 router.get('/', async (req, res) => {
-  const { start, end } = req.query;
+  const { start, end, team_id } = req.query;
   let q = supabase.from('tests').select('*').order('date', { ascending: false });
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
   if (start) q = q.gte('date', start);
   if (end)   q = q.lte('date', end);
+  if (team_id) q = q.eq('team_id', team_id);
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
-// POST /api/tests
 router.post('/', async (req, res) => {
-  const { date, name, amount } = req.body;
-  const { data, error } = await supabase
-    .from('tests')
-    .insert({ date, name, amount, created_by: req.user.id })
-    .select().single();
+  const { date, name, amount, team_id } = req.body;
+  const { data, error } = await supabase.from('tests')
+    .insert({ date, name, amount, team_id, created_by: req.user.id }).select().single();
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-
-// PUT /api/tests/:id
 router.put('/:id', async (req, res) => {
   const { date, name, amount } = req.body;
   let q = supabase.from('tests').update({ date, name, amount }).eq('id', req.params.id);
@@ -37,8 +30,6 @@ router.put('/:id', async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
-
-// DELETE /api/tests/:id
 router.delete('/:id', async (req, res) => {
   let q = supabase.from('tests').delete().eq('id', req.params.id);
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
@@ -46,5 +37,4 @@ router.delete('/:id', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
-
 module.exports = router;
