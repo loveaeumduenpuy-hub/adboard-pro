@@ -11,6 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // routes
 app.use('/api/auth',    require('./routes/auth'));
+app.use('/api/teams',   require('./routes/teams'));
 app.use('/api/pages',   require('./routes/pages'));
 app.use('/api/skus',    require('./routes/skus'));
 app.use('/api/sales',   require('./routes/sales'));
