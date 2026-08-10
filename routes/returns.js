@@ -7,9 +7,10 @@ router.use(requireAuth);
 
 // GET /api/returns?month=
 router.get('/', async (req, res) => {
-  const { month } = req.query;
+  const { month, team_id } = req.query;
   let q = supabase.from('returns').select('*, pages(name)').order('month', { ascending: false });
   if (month) q = q.eq('month', month);
+  if (team_id) q = q.eq('team_id', team_id);
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);

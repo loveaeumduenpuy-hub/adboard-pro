@@ -7,8 +7,10 @@ router.use(requireAuth);
 
 // GET /api/skus — ทุกคนดูได้ (ต้องรู้ว่าสินค้ามีอะไรเพื่อกรอกยอด)
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase
-    .from('skus').select('*').order('created_at');
+  const { team_id } = req.query;
+  let q = supabase.from('skus').select('*').order('created_at');
+  if (team_id) q = q.eq('team_id', team_id);
+  const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });

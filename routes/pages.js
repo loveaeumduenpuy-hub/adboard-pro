@@ -7,7 +7,10 @@ router.use(requireAuth);
 
 // GET /api/pages — ทุกคนดูได้
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase.from('pages').select('*').order('created_at');
+  const { team_id } = req.query;
+  let q = supabase.from('pages').select('*').order('created_at');
+  if (team_id) q = q.eq('team_id', team_id);
+  const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });

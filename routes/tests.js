@@ -7,11 +7,12 @@ router.use(requireAuth);
 
 // GET /api/tests?start=&end=
 router.get('/', async (req, res) => {
-  const { start, end } = req.query;
+  const { start, end, team_id } = req.query;
   let q = supabase.from('tests').select('*').order('date', { ascending: false });
   if (req.user.role !== 'admin') q = q.eq('created_by', req.user.id);
   if (start) q = q.gte('date', start);
   if (end)   q = q.lte('date', end);
+  if (team_id) q = q.eq('team_id', team_id);
   const { data, error } = await q;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
