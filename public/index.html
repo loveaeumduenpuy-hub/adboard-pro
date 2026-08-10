@@ -1450,7 +1450,13 @@ async function addSku(){
   skus.push(data); $('sku-name').value=''; $('sku-msg').textContent='';
   renderSkuMgr(); toast('เพิ่ม SKU แล้ว');
 }
-function renderSkuMgr(){
+async function renderSkuMgr(){
+  // โหลด pages และ skus ใหม่ตาม team ปัจจุบันเสมอ
+  const tid = _currentTeam?.id || '';
+  pages = await apiGET('/pages' + (tid ? '?team_id='+tid : '')) || pages;
+  skus  = await apiGET('/skus'  + (tid ? '?team_id='+tid : '')) || skus;
+  refreshSelects();
+
   $('pages-tbl').innerHTML=mkTable(['ชื่อเพจ','สี','จัดการ'],
     pages.map(p=>[esc(p.name),
       `<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${p.color}"></span>`,
@@ -1459,8 +1465,8 @@ function renderSkuMgr(){
   );
   $('skus-tbl').innerHTML=mkTable(
     ['เพจ','SKU','ชิ้น/ออ','ราคา','ทุน/ชิ้น','ส่ง','แพ็ค','แอดมิน','COD%','จัดการ'],
-    skus.map(s=>[esc(pageName(s.pageId)),esc(s.name),s.pieces,fmt(s.price),fmt(s.cost),
-      fmt(s.ship),fmt(s.pack),fmt(s.admin),s.cod+'%',
+    skus.map(s=>[esc(pageName(s.page_id||s.pageId)),esc(s.name),s.pieces,fmt(s.price),fmt(s.cost),
+      fmt(s.ship),fmt(s.pack),fmt(s.admin_fee||s.admin),( s.cod_pct||s.cod||0)+'%',
       `<button class="btn btn-ghost btn-sm" onclick="openEditSku('${s.id}')">แก้ไข</button>
        <button class="btn btn-danger btn-sm" onclick="deleteSku('${s.id}')">ลบ</button>`
     ]),'ยังไม่มี SKU'
