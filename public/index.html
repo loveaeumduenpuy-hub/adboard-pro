@@ -263,6 +263,19 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,1
   display:none;position:fixed;inset:0;background:var(--bg);
   z-index:9999;align-items:center;justify-content:center;
 }
+/* ── Team select screen ── */
+#team-screen{
+  display:none;position:fixed;inset:0;background:var(--bg);
+  z-index:9998;align-items:center;justify-content:center;
+}
+.team-box{background:var(--s2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;width:min(500px,94vw)}
+.team-box h2{font-size:20px;font-weight:800;margin-bottom:4px}
+.team-box p{color:var(--muted2);font-size:13px;margin-bottom:24px}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.team-card{background:var(--s3);border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all .15s;text-align:center}
+.team-card:hover{border-color:var(--blue);background:rgba(59,130,246,.08)}
+.team-card .team-icon{font-size:28px;margin-bottom:8px}
+.team-card .team-name{font-size:14px;font-weight:700}
 .login-box{
   background:var(--s2);border:1px solid var(--border2);border-radius:16px;
   padding:36px 32px;width:min(400px,94vw);
@@ -292,8 +305,12 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,1
     <button class="nav-btn" onclick="goPage('entry',this)"><span class="nav-icon">➕</span>กรอกยอดรายวัน</button>
     <button class="nav-btn" onclick="goPage('history',this)" class="nav-btn admin-only"><span class="nav-icon">📋</span>ประวัติยอดขาย</button>
     <button class="nav-btn" onclick="goPage('skumgr',this)" class="nav-btn admin-only"><span class="nav-icon">📦</span>จัดการ SKU</button>
+    <button class="nav-btn admin-only" onclick="goPage('teammgr',this)"><span class="nav-icon">👥</span>จัดการทีม</button>
     <button class="nav-btn" onclick="goPage('returns',this)" class="nav-btn admin-only"><span class="nav-icon">🔁</span>ตีกลับ</button>
   </nav>
+  <div style="padding:8px 10px;border-top:1px solid var(--border)">
+    <button class="btn btn-ghost" onclick="showTeamSelect(true)" id="current-team-btn" style="width:100%;justify-content:center;font-size:12px">🔄 สลับทีม</button>
+  </div>
   <div class="sb-footer" id="sb-user-info">กำลังโหลด...</div>
 </aside>
 
@@ -522,6 +539,36 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,1
   </div>
 </div>
 
+<!-- ════ TEAM MANAGER ════ -->
+<div id="page-teammgr" class="page">
+  <div class="topbar">
+    <div class="topbar-left"><h2>จัดการทีม</h2><p>สร้างทีม กำหนดสมาชิก</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">สร้างทีมใหม่</div>
+      <div class="frow">
+        <div class="fg" style="flex:1"><label>ชื่อทีม</label><input type="text" id="team-name" placeholder="เช่น ทีมครีม, ทีมตัวล็อค"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addTeam()">+ สร้างทีม</button>
+      <div id="team-msg" style="margin-top:8px;font-size:12px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">เพิ่มสมาชิกเข้าทีม</div>
+      <div class="frow">
+        <div class="fg" style="flex:1"><label>ทีม</label><select id="tm-team" style="width:100%"><option value="">— เลือกทีม —</option></select></div>
+        <div class="fg" style="flex:1"><label>สมาชิก</label><select id="tm-user" style="width:100%"><option value="">— เลือกสมาชิก —</option></select></div>
+      </div>
+      <button class="btn btn-primary" onclick="addTeamMember()">+ เพิ่มสมาชิก</button>
+      <div id="tm-msg" style="margin-top:8px;font-size:12px"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">ทีมทั้งหมด</div>
+    <div class="tbl-wrap"><table id="teams-tbl"></table></div>
+  </div>
+</div>
+
 <!-- ════ SKU MANAGER ════ -->
 <div id="page-skumgr" class="page">
   <div class="topbar">
@@ -706,12 +753,14 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(59,1
 // ══════════════════════════════════════════
 let _token = localStorage.getItem('abp_token') || '';
 let _user  = null;
+let _currentTeam = JSON.parse(localStorage.getItem('abp_team')||'null');
 
 let pages   = [];
 let skus    = [];
 let sales   = [];
 let returns = [];
 let tests   = [];
+let teams   = [];
 
 async function api(method, path, body) {
   const opts = { method, headers: {'Content-Type':'application/json','Authorization':'Bearer '+_token} };
@@ -727,11 +776,14 @@ const apiDEL    = p     => api('DELETE', p);
 
 async function loadAll(start, end) {
   if(!start){ const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0'); start=`${y}-${m}-01`; end=now.toISOString().slice(0,10); }
+  const tid = _currentTeam?.id || '';
+  const tq  = tid ? '&team_id='+tid : '';
   const [p,s,sa,re,te] = await Promise.all([
-    apiGET('/pages'), apiGET('/skus'),
-    apiGET(`/sales?start=${start}&end=${end}`),
-    apiGET('/returns'),
-    apiGET(`/tests?start=${start}&end=${end}`),
+    apiGET('/pages'+(tid?'?team_id='+tid:'')),
+    apiGET('/skus'+(tid?'?team_id='+tid:'')),
+    apiGET(`/sales?start=${start}&end=${end}${tq}`),
+    apiGET('/returns'+(tid?'?team_id='+tid:'')),
+    apiGET(`/tests?start=${start}&end=${end}${tq}`),
   ]);
   pages=p||[]; skus=s||[]; sales=sa||[]; returns=re||[]; tests=te||[];
 }
@@ -760,14 +812,55 @@ async function doLogin(){
 
 async function initApp(){
   hideLoginScreen();
+  // โหลด teams ที่ user นี้อยู่
+  teams = await apiGET('/teams') || [];
+  const isAdmin = _user?.role==='admin';
+  // ตรวจว่าทีมที่เลือกไว้ยังมีอยู่ไหม
+  const validTeam = _currentTeam && teams.find(t=>t.id===_currentTeam.id);
+  if(!validTeam){
+    _currentTeam = null;
+    localStorage.removeItem('abp_team');
+    showTeamSelect(false);
+    return;
+  }
+  await enterTeam(_currentTeam, false);
+}
+
+async function enterTeam(team, showApp=true){
+  _currentTeam = team;
+  localStorage.setItem('abp_team', JSON.stringify(team));
+  // ซ่อน team screen
+  const ts=$('team-screen');
+  if(ts) ts.style.display='none';
+  document.querySelector('.app').style.display='grid';
   await loadAll();
   const isAdmin = _user?.role==='admin';
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
   const info=$('sb-user-info');
   if(info) info.textContent=(_user?.name||_user?.email)+' · '+(isAdmin?'Admin':'Staff');
+  const btn=$('current-team-btn');
+  if(btn) btn.textContent='🔄 '+team.name;
   refreshSelects();
   renderDash();
   if(!isAdmin){ goPage('entry',document.querySelector('.nav-btn[onclick*=\'entry\']')); }
+}
+
+async function showTeamSelect(reloadTeams=true){
+  if(reloadTeams) teams = await apiGET('/teams') || [];
+  const isAdmin = _user?.role==='admin';
+  $('team-screen-sub').textContent = 'สวัสดี '+(_user?.name||_user?.email)+' — เลือกทีม';
+  const cards = $('team-cards');
+  if(!teams.length){
+    cards.innerHTML='<div style="color:var(--muted);text-align:center;padding:16px">ยังไม่มีทีม — Admin ต้องสร้างทีมก่อน</div>';
+  } else {
+    cards.innerHTML = teams.map(t=>`
+      <div class="team-card" onclick="enterTeam(JSON.parse(this.dataset.team));" data-team="${esc(JSON.stringify(t))}">
+        <div class="team-icon">👥</div>
+        <div class="team-name">${esc(t.name)}</div>
+      </div>`).join('');
+  }
+  document.querySelector('.app').style.display='none';
+  $('team-screen').style.display='flex';
 }
 
 // ══════════════════════════════════════════
@@ -854,6 +947,7 @@ function goPage(name, btn){
   if(name==='entry')     { setEntryDefaults(); renderSkuInputs(); }
   if(name==='history')   { setHistDefaults(); renderHistory(); }
   if(name==='skumgr')    renderSkuMgr();
+  if(name==='teammgr')   renderTeamMgr();
   if(name==='returns')   { setReturnDefaults(); renderReturns(); }
 }
 
@@ -1156,7 +1250,7 @@ async function saveEntry(){
   const items=getEntryItems();
   if(!date||!page_id){ toast('เลือกวันที่และเพจก่อน','var(--red)'); return; }
   if(!items.length&&!ads){ toast('กรอกออเดอร์หรือค่า Ads อย่างน้อย 1 อย่าง','var(--red)'); return; }
-  const data=await apiPOST('/sales',{date,page_id,ads,items});
+  const data=await apiPOST('/sales',{date,page_id,ads,items,team_id:_currentTeam?.id});
   if(!data||data.error){toast('บันทึกไม่ได้: '+data?.error,'var(--red)');return;}
   sales.push(data);
   toast('บันทึกแล้ว ✓'); clearEntry();
@@ -1176,7 +1270,7 @@ async function saveTests(){
   if(!date){ toast('เลือกวันที่ก่อน','var(--red)'); return; }
   if(!testItems.length){ toast('กรอกค่าเทสอย่างน้อย 1 รายการ','var(--red)'); return; }
   for(const t of testItems){
-    const data=await apiPOST('/tests',{date,name:t.name,amount:t.amount});
+    const data=await apiPOST('/tests',{date,name:t.name,amount:t.amount,team_id:_currentTeam?.id});
     if(data&&!data.error) tests.push(data);
   }
   toast('บันทึกค่าเทสแล้ว ✓'); clearTests();
@@ -1306,7 +1400,7 @@ async function updateSale(){
 async function addPage(){
   const name=$('pg-name').value.trim(), color=$('pg-color').value;
   if(!name){ $('pg-msg').textContent='ใส่ชื่อเพจด้วย'; return; }
-  const data = await apiPOST('/pages',{name,color});
+  const data = await apiPOST('/pages',{name,color,team_id:_currentTeam?.id});
   if(!data||data.error){ $('pg-msg').textContent=data?.error||'เกิดข้อผิดพลาด'; return; }
   pages.push(data);
   $('pg-name').value=''; $('pg-msg').textContent='';
@@ -1322,7 +1416,7 @@ async function deletePage(id){
 async function addSku(){
   const page_id=$('sku-page').value, name=$('sku-name').value.trim();
   if(!page_id||!name){ $('sku-msg').textContent='เลือกเพจและใส่ชื่อ SKU'; return; }
-  const body={page_id,name,
+  const body={page_id,name,team_id:_currentTeam?.id,
     pieces:+$('sku-pieces').value||1, price:+$('sku-price').value||0,
     cost:+$('sku-cost').value||0,     ship:+$('sku-ship').value||0,
     pack:+$('sku-pack').value||0,     admin_fee:+$('sku-admin').value||0,
@@ -1332,7 +1426,11 @@ async function addSku(){
   skus.push(data); $('sku-name').value=''; $('sku-msg').textContent='';
   renderSkuMgr(); toast('เพิ่ม SKU แล้ว');
 }
-function renderSkuMgr(){
+async function renderSkuMgr(){
+  const tid = _currentTeam?.id||'';
+  pages = await apiGET('/pages'+(tid?'?team_id='+tid:'')) || pages;
+  skus  = await apiGET('/skus'+(tid?'?team_id='+tid:'')) || skus;
+  refreshSelects();
   $('pages-tbl').innerHTML=mkTable(['ชื่อเพจ','สี','จัดการ'],
     pages.map(p=>[esc(p.name),
       `<span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${p.color}"></span>`,
@@ -1341,8 +1439,8 @@ function renderSkuMgr(){
   );
   $('skus-tbl').innerHTML=mkTable(
     ['เพจ','SKU','ชิ้น/ออ','ราคา','ทุน/ชิ้น','ส่ง','แพ็ค','แอดมิน','COD%','จัดการ'],
-    skus.map(s=>[esc(pageName(s.pageId)),esc(s.name),s.pieces,fmt(s.price),fmt(s.cost),
-      fmt(s.ship),fmt(s.pack),fmt(s.admin),s.cod+'%',
+    skus.map(s=>[esc(pageName(s.page_id||s.pageId)),esc(s.name),s.pieces,fmt(s.price),fmt(s.cost),
+      fmt(s.ship),fmt(s.pack),fmt(s.admin_fee||s.admin),(s.cod_pct||s.cod||0)+'%',
       `<button class="btn btn-ghost btn-sm" onclick="openEditSku('${s.id}')">แก้ไข</button>
        <button class="btn btn-danger btn-sm" onclick="deleteSku('${s.id}')">ลบ</button>`
     ]),'ยังไม่มี SKU'
@@ -1381,7 +1479,7 @@ function setReturnDefaults(){
 async function saveReturn(){
   const month=$('ret-month').value, page_id=$('ret-page').value;
   if(!month||!page_id){ toast('เลือกเดือนและเพจก่อน','var(--red)'); return; }
-  const data=await apiPOST('/returns',{month,page_id,return_orders:+$('ret-orders').value||0,cost_per_return:+$('ret-cost').value||0});
+  const data=await apiPOST('/returns',{month,page_id,return_orders:+$('ret-orders').value||0,cost_per_return:+$('ret-cost').value||0,team_id:_currentTeam?.id});
   if(!data||data.error){toast('บันทึกไม่ได้: '+data?.error,'var(--red)');return;}
   returns.push(data); renderReturns(); toast('บันทึกตีกลับแล้ว');
 }
@@ -1425,7 +1523,62 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   }
   showLoginScreen();
 });
+// ══════════════════════════════════════════
+//  TEAM MANAGEMENT
+// ══════════════════════════════════════════
+async function renderTeamMgr(){
+  teams = await apiGET('/teams') || [];
+  const users = await apiGET('/auth/users') || [];
+  const members = await apiGET('/teams/members') || [];
+  $('tm-team').innerHTML = '<option value="">— เลือกทีม —</option>' +
+    teams.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('tm-user').innerHTML = '<option value="">— เลือกสมาชิก —</option>' +
+    users.map(u=>`<option value="${u.id}">${esc(u.name||u.email)} (${u.role})</option>`).join('');
+  $('teams-tbl').innerHTML = mkTable(
+    ['ชื่อทีม','สมาชิก','จัดการ'],
+    teams.map(t=>{
+      const mems = members.filter(m=>m.team_id===t.id);
+      const memNames = mems.map(m=>{ const u=users.find(u=>u.id===m.user_id); return u?`<span class="badge badge-b">${esc(u.name||u.email)}</span>`:''; }).join(' ');
+      return [`<strong>${esc(t.name)}</strong>`, memNames||'<span style="color:var(--muted)">ยังไม่มีสมาชิก</span>',
+        `<button class="btn btn-danger btn-sm" onclick="deleteTeam('${t.id}')">ลบ</button>`];
+    }), 'ยังไม่มีทีม'
+  );
+}
+async function addTeam(){
+  const name=$('team-name').value.trim();
+  if(!name){ $('team-msg').textContent='ใส่ชื่อทีมด้วย'; return; }
+  const data=await apiPOST('/teams',{name});
+  if(!data||data.error){ $('team-msg').textContent=data?.error||'เกิดข้อผิดพลาด'; return; }
+  teams.push(data); $('team-name').value=''; $('team-msg').textContent='';
+  renderTeamMgr(); toast('สร้างทีมแล้ว');
+}
+async function addTeamMember(){
+  const team_id=$('tm-team').value, user_id=$('tm-user').value;
+  if(!team_id||!user_id){ $('tm-msg').textContent='เลือกทีมและสมาชิกด้วย'; return; }
+  const data=await apiPOST('/teams/members',{team_id,user_id});
+  if(!data||data.error){ $('tm-msg').textContent=data?.error||'เกิดข้อผิดพลาด'; return; }
+  $('tm-msg').textContent=''; renderTeamMgr(); toast('เพิ่มสมาชิกแล้ว');
+}
+async function deleteTeam(id){
+  if(!confirm('ลบทีมนี้?')) return;
+  await apiDEL('/teams/'+id);
+  teams=teams.filter(t=>t.id!==id);
+  if(_currentTeam?.id===id){ _currentTeam=null; localStorage.removeItem('abp_team'); }
+  renderTeamMgr(); toast('ลบทีมแล้ว');
+}
+
 </script>
+
+<!-- Team Select Screen -->
+<div id="team-screen">
+  <div class="team-box">
+    <div style="font-size:28px;margin-bottom:12px">👥</div>
+    <h2>เลือกทีม</h2>
+    <p id="team-screen-sub">เลือกทีมที่ต้องการ</p>
+    <div class="team-grid" id="team-cards"></div>
+    <div id="team-screen-msg" style="font-size:12px;color:var(--red)"></div>
+  </div>
+</div>
 
 <!-- Login Screen -->
 <div id="login-screen">
