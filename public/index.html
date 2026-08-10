@@ -1032,10 +1032,11 @@ function getDashTests(){
 }
 
 async function renderDash(){
-  skus = await apiGET('/skus') || skus;
-pages = await apiGET('/pages') || pages;
+  const tid = _currentTeam?.id||'';
+  skus  = await apiGET('/skus'+(tid?'?team_id='+tid:''))  || skus;
+  pages = await apiGET('/pages'+(tid?'?team_id='+tid:'')) || pages;
   const now=new Date(),y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,'0');
-  sales = await apiGET(`/sales?start=${y}-${m}-01&end=${y}-${m}-31`) || sales;
+  sales = await apiGET(`/sales?start=${y}-${m}-01&end=${y}-${m}-31`+(_currentTeam?.id?'&team_id='+_currentTeam.id:'')) || sales;
   const records  = getDashRecords();
   const testRecs = getDashTests();
   const pageId   = $('f-page')?.value||'';
@@ -1306,7 +1307,8 @@ function setHistDefaults(){
 
 async function renderTestHistory(){
   const start=$('ht-start').value, end=$('ht-end').value;
-  const data = await apiGET(`/tests?start=${start}&end=${end}`) || [];
+  const tid = _currentTeam?.id||'';
+  const data = await apiGET(`/tests?start=${start}&end=${end}`+(tid?'&team_id='+tid:'')) || [];
   const total = data.reduce((s,t)=>s+(+t.amount||0),0);
   $('hist-test-tbl').innerHTML = mkTable(
     ['วันที่','ชื่อสินค้าที่เทส','ค่าแอด (฿)','จัดการ'],
@@ -1333,8 +1335,10 @@ function openEditTest(id, date, name, amount){
     else toast('แก้ไขไม่ได้: '+(r?.error||''),'var(--red)');
   });
 }
-function renderHistory(){
+async function renderHistory(){
   const start=$('h-start').value, end=$('h-end').value, pageId=$('h-page').value;
+  const tid = _currentTeam?.id||'';
+  sales = await apiGET(`/sales?start=${start}&end=${end}`+(tid?'&team_id='+tid:'')) || sales;
   const data=sales.filter(r=>{
     if(start&&r.date<start)return false;
     if(end&&r.date>end)return false;
